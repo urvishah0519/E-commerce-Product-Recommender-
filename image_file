@@ -1,0 +1,44 @@
+import tkinter as tk
+from urllib.request import urlopen
+from PIL import Image, ImageTk
+import io
+
+
+def show_image_from_url(image_url):
+    """Display an image in a Tkinter window using an online URL."""
+    try:
+        # Fetch image data from the web
+        response = urlopen(image_url)
+        image_data = response.read()
+        response.close()
+
+        # Load the image using Pillow
+        image = Image.open(io.BytesIO(image_data))
+
+        # Initialize GUI window
+        window = tk.Tk()
+        window.title("Image Viewer")
+
+        # Convert image to a format Tkinter can display
+        tk_image = ImageTk.PhotoImage(image)
+
+        # Display image inside a label
+        label = tk.Label(window, image=tk_image)
+        label.pack(padx=10, pady=10)
+
+        # Keep a reference to avoid garbage collection
+        label.image = tk_image
+
+        window.mainloop()
+
+    except Exception as e:
+        print("Error loading image:", e)
+
+
+def main():
+    url = input("Enter image URL: ").strip()
+    show_image_from_url(url)
+
+
+if __name__ == "__main__":
+    main()
