@@ -1,0 +1,120 @@
+import tkinter as tk
+from tkinter import ttk
+import requests
+from bs4 import BeautifulSoup
+
+
+class ProductViewer(tk.Tk):
+    def __init__(self, url):
+        super().__init__()
+        self.title("Product Details Viewer")
+        self.geometry("900x600")
+        self.url = url
+
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True)
+
+        # Scrollable Canvas setup
+        canvas = tk.Canvas(container, bg="white")
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        self.content_frame = ttk.Frame(canvas)
+
+        self.content_frame.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=self.content_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.load_product_data()
+
+    def load_product_data(self):
+        """Fetch product data and display on GUI."""
+        try:
+            response = requests.get(self.url)
+            response.raise_for_status()
+        except Exception as e:
+            tk.Label(self.content_frame, text=f"Error fetching page: {e}", fg="red").pack()
+            return
+
+        soup = BeautifulSoup(response.content, "html.parser")
+
+        # --- Product Title ---
+        title_div = soup.find("div", {"class": "product-details"})
+        if title_div:
+            title = title_div.find("h1", {"class": "title"})
+            if title:
+                tk.Label(
+                    self.content_frame,
+                    text=title.get_text(strip=True),
+                    font=("Helvetica", 20, "bold"),
+                    bg="white",
+                ).pack(pady=10)
+
+        # --- Selling Price ---
+        price = soup.find("span", {"class": "selling-price"})
+        if price:
+            tk.Label(
+                self.content_frame,
+                text=f"Selling Price: {price.get_text(strip=True)}",
+                font=("Helvetica", 14),
+                bg="white",
+            ).pack(pady=5)
+
+        # --- Key Features ---
+        features_section = title_div.find_all("li", {"class": "key-specification"}) if title_div else []
+        if features_section:
+            tk.Label(
+                self.content_frame,
+                text="Key Features",
+                font=("Helvetica", 16, "underline"),
+                bg="white",
+            ).pack(pady=8)
+            for feature in features_section:
+                tk.Label(
+                    self.content_frame,
+                    text=f"• {feature.get_text(strip=True)}",
+                    font=("Helvetica", 12),
+                    bg="white",
+                    anchor="w",
+                    justify="left",
+                ).pack(fill="x", padx=40)
+
+        # --- Specifications Table ---
+        specs_div = soup.find("div", {"class": "productSpecs"})
+        if specs_div:
+            tk.Label(
+                self.content_frame,
+                text="Specifications",
+                font=("Helvetica", 16, "underline"),
+                bg="white",
+            ).pack(pady=10)
+
+            spec_table = specs_div.find("table", {"class": "specTable"})
+            if spec_table:
+                for row in spec_table.find_all("tr"):
+                    cols = row.find_all("td")
+                    if len(cols) == 2:
+                        key = cols[0].get_text(strip=True)
+                        value = cols[1].get_text(strip=True)
+                        tk.Label(
+                            self.content_frame,
+                            text=f"{key}: {value}",
+                            font=("Helvetica", 11),
+                            bg="white",
+                            anchor="w",
+                            justify="left",
+                        ).pack(fill="x", padx=40, pady=2)
+
+
+def main():
+    # Example Flipkart/Hometown product page (replace with any valid product URL)
+    url = input("Enter product URL: ").strip()
+    app = ProductViewer(url)
+    app.mainloop()
+
+
+if __name__ == "__main__":
+    main()
